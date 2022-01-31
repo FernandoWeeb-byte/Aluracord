@@ -3,13 +3,18 @@ import { useState, useEffect } from 'react';
 import appConfig from '../config.json';
 import { createClient } from '@supabase/supabase-js'
 import {withRouter} from 'next/router';
+import {ButtonSendSticker} from '../src/components/ButtonSendSticker'
 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzMxNjAzNCwiZXhwIjoxOTU4ODkyMDM0fQ.0-1dubrhfx9pzGj7exg3xpxX8i-H8iQDjbYcP6SHnD8'
 const SUPABASE_URL = 'https://hcvvsnbriwqprhjsfyzz.supabase.co'
 
 const supabaseClient = createClient(SUPABASE_URL,SUPABASE_KEY);
 
-
+function RealTimeMenssage(adicionarMensagem){
+    return supabaseClient.from('mensagens').on('INSERT',(res)=>{
+        adicionarMensagem(res.new)
+    }).subscribe()
+}
 
 function ChatPage(props) {
     // Sua lógica vai aqui
@@ -22,6 +27,12 @@ function ChatPage(props) {
         setUsername(props.router.query.user)
         supabaseClient.from('mensagens').select('*').order('id',{ascending:false}).then(({data})=>{
             setListText(data)
+        })
+        RealTimeMenssage((novaMensagem)=>{
+            console.log(novaMensagem)
+            setListText((listNow)=>{
+               return [novaMensagem, ...listNow]
+            })
         })
       
     },[]);
@@ -36,8 +47,8 @@ function ChatPage(props) {
         supabaseClient.from('mensagens').insert([
             novaMensagem
         ]).then(({data})=>{
-            console.log(data)
-            setListText([data[0], ...listText])
+            // console.log(data)
+            // setListText([data[0], ...listText])
         })
         
 
@@ -128,6 +139,9 @@ function ChatPage(props) {
                                 color: appConfig.theme.colors.neutrals[200],
                             }}
                         />
+                        <ButtonSendSticker onStickerClick={(sticker) => {
+                            handleNovaMensagem(':sticker:' + sticker)
+                        }}/>
                     </Box>
                 </Box>
             </Box>
@@ -270,7 +284,11 @@ function MessageList(props) {
                             </Box> 
                             : null} 
                         </Box>
-                        {mensagem.texto}
+                         
+                        {mensagem.texto.startsWith(':sticker:') ? (
+                            <Image src={mensagem.texto.replace(':sticker:','')}/>
+                        ) : ( mensagem.texto) }
+                        
                         
                     </Text>
                 )
